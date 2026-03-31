@@ -49,9 +49,9 @@ const verifyToken = async (req, res, next) => {
 
 
 // Middleware pour vérifier le service/rôle
-const authorizeService = (serviceRequis,role) => {
+const authorizeService = (serviceRequis,role='admin') => {
     return (req, res, next) => {
-        if (req.user.service !== serviceRequis && (req.user.role !== role || req.user.role !=='admin')) {
+        if (req.user.service !== serviceRequis && (req.user.role !== role && req.user.role !=='admin')) {
             return res.status(403).json({ 
                 message: `Accès refusé : réservé au service ${serviceRequis}` 
             });
@@ -65,6 +65,14 @@ const authorizeService = (serviceRequis,role) => {
 
 app.get('/api/auth/verify', verifyToken, (req, res) => {
     // Si le middleware verifyToken passe, c'est que le token est valide
+    res.json({
+        valid: true,
+        user: req.user // Contient id, email, role, service (venant du token)
+    });
+});
+
+app.get('/api/auth/serviceCheck',verifyToken,authorizeService('achat','commercial'),(req,res)=>{
+     // Si le middleware authorizeService passe, c'est que le token est valide
     res.json({
         valid: true,
         user: req.user // Contient id, email, role, service (venant du token)
