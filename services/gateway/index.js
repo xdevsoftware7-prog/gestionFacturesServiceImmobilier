@@ -47,7 +47,21 @@ app.use('/fournisseurs', gatewayAuth, createProxyMiddleware({
     target: 'http://localhost:3002', // Votre futur service Fournisseurs
     changeOrigin: true,
     pathRewrite: {
-        '^/fournisseurs': '/api/fournisseurs',
+        '^/': '/api/fournisseurs/',
+    },
+    onProxyReq: (proxyReq, req, res) => {
+        // On s'assure que les headers injectés sont bien transmis au microservice
+        proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
+        proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
+        proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
+    }
+}));
+
+app.use('/clients', gatewayAuth, createProxyMiddleware({
+    target: 'http://localhost:3003', // Votre futur service clients
+    changeOrigin: true,
+    pathRewrite: {
+        '^/': '/api/clients/',
     },
     onProxyReq: (proxyReq, req, res) => {
         // On s'assure que les headers injectés sont bien transmis au microservice
