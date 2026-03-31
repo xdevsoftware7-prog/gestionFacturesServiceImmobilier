@@ -49,6 +49,7 @@ async function createDatabase() {
                 date DATE,
                 montant_ht DECIMAL(15,2),
                 tva DECIMAL(5,2),
+                frais_douane DECIMAL(10,2),
                 montant_ttc DECIMAL(15,2),
                 statut ENUM('en attente', 'payée', 'annulée') DEFAULT 'en attente',
                 FOREIGN KEY (fournisseur_id) REFERENCES fournisseurs(id) ON DELETE CASCADE
@@ -60,6 +61,7 @@ async function createDatabase() {
                 date DATE,
                 montant_ht DECIMAL(15,2),
                 tva DECIMAL(5,2),
+                frais_douane DECIMAL(10,2),
                 montant_ttc DECIMAL(15,2),
                 statut ENUM('en attente', 'payée', 'annulée') DEFAULT 'en attente',
                 FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
@@ -88,6 +90,12 @@ async function createDatabase() {
                 password VARCHAR(255) NOT NULL,
                 role VARCHAR(50),
                 service VARCHAR(50)
+            )`,
+            `CREATE TABLE IF NOT EXISTS token_blacklist (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                token TEXT NOT NULL,
+                expire_at DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )`
         ];
 
