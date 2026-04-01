@@ -154,6 +154,48 @@ app.put('/api/factures-fournisseurs/:id', async (req, res) => {
     }
 });
 
+// GET : Historique des paiements d'une facture spécifique
+app.get('/api/factures-fournisseurs/:id/paiements', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // On récupère d'abord les infos de la facture pour le contexte
+        const [facture] = await pool.execute(
+            'SELECT numero, montant_ttc, statut FROM factures_fournisseurs WHERE id = ?', 
+            [id]
+        );
+
+        if (facture.length === 0) {
+            return res.status(404).json({ message: "Facture non trouvée" });
+        }
+
+        // On récupère tous les paiements liés à cet ID
+        const [paiements] = await pool.execute(
+            `SELECT id, date, montant, mode_paiement 
+             FROM paiements_fournisseurs 
+             WHERE facture_id = ? 
+             ORDER BY date DESC`, 
+            [id]
+        );
+
+        // Calcul du total déjà payé
+        const total_paye = paiements.reduce((sum, p) => sum + parseFloat(p.montant), 0);
+
+        res.json({
+            facture_numero: facture[0].numero,
+            montant_total_a_payer: facture[0].montant_ttc,
+            statut_actuel: facture[0].statut,
+            total_deja_paye: total_paye.toFixed(2),
+            reste_a_recouvrer: (facture[0].montant_ttc - total_paye).toFixed(2),
+            historique: paiements
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Erreur lors de la récupération de l'historique" });
+    }
+});
+
 // DELETE une facture-founisseurs
 app.delete('/api/factures-fournisseurs/:id', async (req, res) => {
     try {
