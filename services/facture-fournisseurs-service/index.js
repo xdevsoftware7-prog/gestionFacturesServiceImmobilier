@@ -84,7 +84,7 @@ app.post('/api/factures-fournisseurs', async (req, res) => {
 app.get('/api/factures-fournisseurs', async (req, res) => {
     try {
         const [rows] = await pool.execute(`
-            SELECT f.*, fr.nom as fournisseur_nom 
+            SELECT f.*, fr.nom as fournisseur_nom, fr.prenom as fournisseur_prenom 
             FROM factures_fournisseurs f
             JOIN fournisseurs fr ON f.fournisseur_id = fr.id
             ORDER BY f.date DESC
@@ -95,40 +95,62 @@ app.get('/api/factures-fournisseurs', async (req, res) => {
     }
 });
 
-// UPDATE : Modifier le statut
+
+// Modification des montants de facture-fournisseurs ou de statut
+// et depend sur la valeur de statut, on effectue des transcations surla table paiment-fournisseur
+
 app.put('/api/factures-fournisseurs/:id', async (req, res) => {
+    const connection = await pool.getConnection();
     try {
-        const { statut } = req.body;
+        await connection.beginTransaction();
+
+        const { statut, frais_douane, montant_ht, tva, montant_paye } = req.body; // montant_paye est optionnel ici
         const { id } = req.params;
 
-        await pool.execute(
-            `UPDATE factures_fournisseurs 
-             SET statut = ? WHERE id = ?`,
-            [statut, id]
-        );
-        res.json({ message: "Facture mise à jour" });
-    } catch (error) {
-        res.status(500).json({ message: "Erreur de modification" });
-    }
-});
-// Modification des montants de facture-fournisseurs
-app.put('/api/factures-fournisseurs/:id', async (req, res) => {
-    try {
-        const {frais_douane, montant_ht, tva } = req.body;
-        const { id } = req.params;
-
-        // Recalcul du TTC pour la mise à jour
+        // Recalcul du TTC
         const montant_ttc = parseFloat(montant_ht) * (1 + parseFloat(tva) / 100) + parseFloat(frais_douane || 0);
 
-        await pool.execute(
+        // 1. Mise à jour de la facture
+        await connection.execute(
             `UPDATE factures_fournisseurs 
-             SET frais_douane = ?, montant_ht = ?, tva = ?, montant_ttc = ? 
+             SET statut = ?, frais_douane = ?, montant_ht = ?, tva = ?, montant_ttc = ? 
              WHERE id = ?`,
-            [frais_douane, montant_ht, tva, montant_ttc, id]
+            [statut, frais_douane, montant_ht, tva, montant_ttc, id]
         );
-        res.json({ message: "Facture mise à jour" });
+
+        // 2. Gestion des paiements selon le statut
+        if (statut === 'payée') {
+            // Si on force 'payée', on crée un paiement pour le montant TOTAL restant
+            const [payments] = await connection.execute('SELECT SUM(montant) as total FROM paiements_fournisseurs WHERE facture_id = ?', [id]);
+            const deja_paye = payments[0].total || 0;
+            const reste_a_payer = montant_ttc - deja_paye;
+
+            if (reste_a_payer > 0) {
+                await connection.execute(
+                    `INSERT INTO paiements_fournisseurs (facture_id, date, montant, mode_paiement) VALUES (?, NOW(), ?, ?)`,
+                    [id, reste_a_payer, 'Virement']
+                );
+            }
+        } 
+        else if (statut === 'partiellement payée' && montant_paye > 0) {
+            // On ajoute juste le nouveau versement
+            await connection.execute(
+                `INSERT INTO paiements_fournisseurs (facture_id, date, montant, mode_paiement) VALUES (?, NOW(), ?, ?)`,
+                [id, montant_paye, 'Virement']
+            );
+        }
+        else if (statut === 'annulée') {
+            await connection.execute('DELETE FROM paiements_fournisseurs WHERE facture_id = ?', [id]);
+        }
+
+        await connection.commit();
+        res.json({ message: "Statut mis à jour avec gestion des paiements partiels" });
+
     } catch (error) {
+        await connection.rollback();
         res.status(500).json({ message: "Erreur de modification" });
+    } finally {
+        connection.release();
     }
 });
 
