@@ -225,6 +225,65 @@ app.delete('/api/factures-fournisseurs/:id', async (req, res) => {
 });
 
 
+// DELETE : Supprimer un paiement spécifique
+app.delete('/api/paiements-fournisseurs/:paiement_id', async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        const { paiement_id } = req.params;
+
+        // 1. Récupérer l'ID de la facture liée avant de supprimer le paiement
+        const [paiement] = await connection.execute(
+            'SELECT facture_id FROM paiements_fournisseurs WHERE id = ?', 
+            [paiement_id]
+        );
+
+        if (paiement.length === 0) {
+            return res.status(404).json({ message: "Paiement non trouvé" });
+        }
+
+        const facture_id = paiement[0].facture_id;
+
+        // 2. Supprimer le paiement
+        await connection.execute('DELETE FROM paiements_fournisseurs WHERE id = ?', [paiement_id]);
+
+        // 3. Recalculer le nouveau statut de la facture
+        const [totalPaiements] = await connection.execute(
+            'SELECT SUM(montant) as total FROM paiements_fournisseurs WHERE facture_id = ?', 
+            [facture_id]
+        );
+        const [factureInfo] = await connection.execute(
+            'SELECT montant_ttc FROM factures_fournisseurs WHERE id = ?', 
+            [facture_id]
+        );
+
+        const deja_paye = totalPaiements[0].total || 0;
+        const ttc = factureInfo[0].montant_ttc;
+        
+        let nouveauStatut = 'en attente';
+        if (deja_paye > 0 && deja_paye < ttc) {
+            nouveauStatut = 'partiellement payée';
+        } else if (deja_paye >= ttc) {
+            nouveauStatut = 'payée';
+        }
+
+        // 4. Mettre à jour la facture avec le nouveau statut
+        await connection.execute(
+            'UPDATE factures_fournisseurs SET statut = ? WHERE id = ?',
+            [nouveauStatut, facture_id]
+        );
+
+        await connection.commit();
+        res.json({ message: "Paiement supprimé et statut facture actualisé", nouveauStatut });
+
+    } catch (error) {
+        await connection.rollback();
+        res.status(500).json({ message: "Erreur lors de la suppression du paiement" });
+    } finally {
+        connection.release();
+    }
+});
+
 
 app.listen(PORT, () => {
     console.log(`api Facture-Fournisseur running on http://localhost:${PORT}`);
