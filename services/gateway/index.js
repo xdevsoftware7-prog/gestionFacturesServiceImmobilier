@@ -38,6 +38,9 @@ app.use('/auth', createProxyMiddleware({
     pathRewrite: {
         // On remplace le début de la chaîne (^) par /api/auth
         '^/': '/api/auth/',
+    },
+    onProxyReq:(proxyReq,req,res)=>{
+        proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY);  
     }
 }));
 
