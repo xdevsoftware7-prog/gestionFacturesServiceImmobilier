@@ -89,16 +89,26 @@ const authorizeService = (serviceRequis) => {
 // 1. CREATE : Ajouter un client
 app.post('/api/clients', authorizeService(SERVICE_COMMERCIAL), async (req, res) => {
     try {
-        const { nom, prenom, adresse,ville,pays,distance_km,frais_douane } = req.body;
+        const { nom, prenom, adresse, ville, pays } = req.body;
         
-        if (!nom) return res.status(400).json({ message: "Le nom du client est obligatoire" });
+        if (!nom || !adresse || !ville || !pays) {
+            return res.status(400).json({ message: "Les informations de localisation sont obligatoires" });
+        }
+
+        // Appel de la fonction de géolocalisation automatique
+        const geo = await getGeoDetails(adresse, ville, pays);
 
         const [result] = await pool.execute(
-            'INSERT INTO clients (nom, prenom, adresse, ville,pays,distance_km,frais_douane) VALUES (?,?, ?, ?, ?, ?, ?)',
-            [nom, prenom, adresse, ville,pays,distance_km,frais_douane]
+            `INSERT INTO clients (nom, prenom, adresse, ville, pays, distance_km, frais_douane, latitude, longitude) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [nom, prenom, adresse, ville, pays, geo.distance_km, geo.frais_douane, geo.lat, geo.lon]
         );
 
-        res.status(201).json({ message: "client créé", id: result.insertId });
+        res.status(201).json({ 
+            message: "Client créé avec succès", 
+            id: result.insertId,
+            details_geo: geo 
+        });
     } catch (error) {
         res.status(500).json({ message: "Erreur lors de la création", error: error.message });
     }
