@@ -80,21 +80,39 @@ app.post('/api/factures-fournisseurs', async (req, res) => {
     }
 });
 
-// READ : Liste les factures-forunisseurs avec le nom du fournisseur
+// READ : Lister les factures-fournisseurs avec filtres (statut, fournisseur_id, numero)
 app.get('/api/factures-fournisseurs', async (req, res) => {
     try {
-        const [rows] = await pool.execute(`
+        const { statut, fournisseur_id, numero } = req.query;
+        let query = `
             SELECT f.*, fr.nom as fournisseur_nom, fr.prenom as fournisseur_prenom 
             FROM factures_fournisseurs f
             JOIN fournisseurs fr ON f.fournisseur_id = fr.id
-            ORDER BY f.date DESC
-        `);
+            WHERE 1=1`; // Le "1=1" facilite l'ajout dynamique de conditions AND
+        
+        const params = [];
+
+        if (statut) {
+            query += ` AND f.statut = ?`;
+            params.push(statut);
+        }
+        if (fournisseur_id) {
+            query += ` AND f.fournisseur_id = ?`;
+            params.push(fournisseur_id);
+        }
+        if (numero) {
+            query += ` AND f.numero LIKE ?`;
+            params.push(`%${numero}%`);
+        }
+
+        query += ` ORDER BY f.date DESC`;
+
+        const [rows] = await pool.execute(query, params);
         res.json(rows);
     } catch (error) {
-        res.status(500).json({ message: "Erreur de récupération" ,error:error.message});
+        res.status(500).json({ message: "Erreur de récupération", error: error.message });
     }
 });
-
 
 // Modification des montants de facture-fournisseurs ou de statut
 // et depend sur la valeur de statut, on effectue des transcations surla table paiment-fournisseur
