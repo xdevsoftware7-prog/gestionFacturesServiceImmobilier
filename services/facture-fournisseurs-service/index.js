@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const mysql = require('mysql2/promise');
 const app = express();
-
+const PDFDocument = require('pdfkit');
 app.use(express.json());
 
 // Connexion MySQL
@@ -298,93 +298,350 @@ app.delete('/api/paiements-fournisseurs/:paiement_id', async (req, res) => {
 
 
 // Generation de pdf pour une facture fournisseur spécifique
+// Palette de couleurs
+
+const COLORS = {
+  black:       '#000000',
+  darkText:    '#131921',   // Noir Amazon
+  bodyText:    '#333333',
+  muted:       '#555555',
+  lightMuted:  '#767676',
+  border:      '#CCCCCC',
+  lightBorder: '#E7E7E7',
+  tableHead:   '#F0F2F2',   // Gris tableau Amazon
+  accent:      '#FF9900',   // Orange Amazon
+  accentDark:  '#C45500',
+  white:       '#FFFFFF',
+  linkBlue:    '#007185',   // Bleu lien Amazon
+  paid:        '#067D62',
+  unpaid:      '#B12704',
+};
+
 app.get('/api/factures-fournisseurs/:id/pdf', async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        // 1. Récupérer les données de la facture et du fournisseur associé
-        const [rows] = await pool.execute(`
-            SELECT f.*, fr.nom as fournisseur_nom, fr.adresse as fournisseur_adresse 
-            FROM factures_fournisseurs f
-            JOIN fournisseurs fr ON f.fournisseur_id = fr.id
-            WHERE f.id = ?`, 
-            [id]
-        );
+    const [rows] = await pool.execute(`
+      SELECT f.*, fr.nom as fournisseur_nom, fr.adresse as fournisseur_adresse 
+      FROM factures_fournisseurs f
+      JOIN fournisseurs fr ON f.fournisseur_id = fr.id
+      WHERE f.id = ?`,
+      [id]
+    );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ message: "Facture introuvable" });
-        }
-
-        const facture = rows[0];
-
-        // 2. Création du document PDF
-        const doc = new PDFDocument({ margin: 50 });
-
-        // Configuration des headers de réponse pour le navigateur
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=facture_${facture.numero}.pdf`);
-
-        // Envoyer le PDF directement au flux de réponse
-        doc.pipe(res);
-
-        // --- DESIGN DU PDF ---
-
-        // En-tête : Informations de l'entreprise (La vôtre)
-        doc.fillColor('#444444').fontSize(20).text('SERVICE IMMOBILIER S.A.', 50, 50);
-        doc.fontSize(10).text('Casablanca, Maroc', 50, 80);
-        doc.text('Contact: contact@immo-service.ma', 50, 95);
-        doc.moveDown();
-
-        // Informations du Fournisseur (Destinataire)
-        doc.fontSize(12).text(`Fournisseur : ${facture.fournisseur_nom}`, 350, 80);
-        doc.fontSize(10).text(`Adresse : ${facture.fournisseur_adresse || 'N/A'}`, 350, 95);
-        
-        // Ligne de séparation
-        doc.moveTo(50, 150).lineTo(550, 150).stroke();
-
-        // Détails de la facture
-        doc.fontSize(16).text(`FACTURE N° : ${facture.numero}`, 50, 170);
-        doc.fontSize(10).text(`Date d'émission : ${new Date(facture.date).toLocaleDateString()}`, 50, 195);
-        doc.text(`Statut actuel : ${facture.statut.toUpperCase()}`, 50, 210);
-
-        // Tableau des montants
-        const tableTop = 250;
-        doc.font('Helvetica-Bold');
-        doc.text('Description', 50, tableTop);
-        doc.text('Montant (MAD)', 450, tableTop, { align: 'right' });
-        
-        doc.moveTo(50, 265).lineTo(550, 265).stroke();
-        doc.font('Helvetica');
-
-        doc.text('Montant Hors Taxe (HT)', 50, 280);
-        doc.text(`${parseFloat(facture.montant_ht).toFixed(2)}`, 450, 280, { align: 'right' });
-
-        doc.text(`TVA (${facture.tva}%)`, 50, 300);
-        const montant_tva = (facture.montant_ht * facture.tva) / 100;
-        doc.text(`${montant_tva.toFixed(2)}`, 450, 300, { align: 'right' });
-
-        doc.text('Frais de Douane', 50, 320);
-        doc.text(`${parseFloat(facture.frais_douane).toFixed(2)}`, 450, 320, { align: 'right' });
-
-        // Total
-        doc.moveTo(350, 350).lineTo(550, 350).stroke();
-        doc.fontSize(14).font('Helvetica-Bold');
-        doc.text('TOTAL TTC', 350, 370);
-        doc.text(`${parseFloat(facture.montant_ttc).toFixed(2)} MAD`, 450, 370, { align: 'right' });
-
-        // Pied de page
-        doc.fontSize(10).font('Helvetica-Oblique')
-           .text('Merci de votre confiance. Document généré automatiquement.', 50, 700, { align: 'center' });
-
-        // Finalisation
-        doc.end();
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Erreur lors de la génération du PDF" });
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Facture introuvable" });
     }
-});
 
+    const facture = rows[0];
+
+    const doc = new PDFDocument({
+      margin: 0,
+      size: 'A4',
+      info: {
+        Title: `Facture Fournisseur ${facture.numero}`,
+        Author: 'SERVICE IMMOBILIER S.A.',
+      }
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=facture_${facture.numero}.pdf`);
+    doc.pipe(res);
+
+    const W       = 595.28;
+    const H       = 841.89;
+    const MARGIN  = 40;
+    const RIGHT   = W - MARGIN;
+    const CW      = W - MARGIN * 2;
+
+    // ─── FOND BLANC TOTAL ─────────────────────────────────────────────────────
+    doc.rect(0, 0, W, H).fill(COLORS.white);
+
+    // ─── BARRE ORANGE AMAZON (top) ────────────────────────────────────────────
+    doc.rect(0, 0, W, 4).fill(COLORS.accent);
+
+    // ─── EN-TÊTE : LOGO + TITRE ───────────────────────────────────────────────
+    const headerY = 20;
+
+    // Logo texte style Amazon
+    doc.fillColor(COLORS.darkText)
+       .font('Helvetica-Bold')
+       .fontSize(26)
+       .text('service', MARGIN, headerY, { continued: true })
+       .fillColor(COLORS.accent)
+       .text('immobilier');
+
+    // Flèche orange style Amazon (sourire)
+    doc.fillColor(COLORS.accent)
+       .font('Helvetica')
+       .fontSize(8)
+       .text('▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔', MARGIN + 2, headerY + 26, { characterSpacing: -1 });
+
+    // Sous-titre entreprise
+    doc.fillColor(COLORS.lightMuted)
+       .font('Helvetica')
+       .fontSize(8)
+       .text(`S-A ${process.env.SERVICE_ADRESSE}  | ${process.env.SERVICE_MAIL} `, MARGIN, headerY + 38);
+
+    // Bloc "FACTURE FOURNISSEUR" à droite
+    doc.fillColor(COLORS.darkText)
+       .font('Helvetica-Bold')
+       .fontSize(18)
+       .text('FACTURE FOURNISSEUR', 0, headerY + 8, { width: RIGHT, align: 'right' });
+
+    doc.fillColor(COLORS.lightMuted)
+       .font('Helvetica')
+       .fontSize(9)
+       .text(`N° ${facture.numero}`, 0, headerY + 32, { width: RIGHT, align: 'right' });
+
+    // ─── LIGNE DE SÉPARATION ──────────────────────────────────────────────────
+    const sepY = 80;
+    doc.rect(MARGIN, sepY, CW, 1).fill(COLORS.border);
+
+    // ─── BLOC INFOS : ÉMETTEUR | DESTINATAIRE | DÉTAILS ──────────────────────
+    const infoY = 95;
+
+    // Colonne 1 — Émetteur
+    doc.fillColor(COLORS.muted).font('Helvetica-Bold').fontSize(8)
+       .text('VENDU PAR', MARGIN, infoY);
+    doc.fillColor(COLORS.darkText).font('Helvetica-Bold').fontSize(9)
+       .text('SERVICE IMMOBILIER S.A.', MARGIN, infoY + 13);
+    doc.fillColor(COLORS.bodyText).font('Helvetica').fontSize(8)
+       .text('Casablanca, Maroc', MARGIN, infoY + 25)
+    //    .text('RC: 123456  |  ICE: 001234567000089', MARGIN, infoY + 36)
+    //    .text('IF: 12345678  |  TVA: MA123456', MARGIN, infoY + 47);
+
+    // Colonne 2 — Fournisseur
+    const col2X = MARGIN + 175;
+    doc.fillColor(COLORS.muted).font('Helvetica-Bold').fontSize(8)
+       .text('FOURNISSEUR', col2X, infoY);
+    doc.fillColor(COLORS.darkText).font('Helvetica-Bold').fontSize(9)
+       .text(facture.fournisseur_nom || 'N/A', col2X, infoY + 13);
+    doc.fillColor(COLORS.bodyText).font('Helvetica').fontSize(8)
+       .text(facture.fournisseur_adresse || 'Adresse non renseignée', col2X, infoY + 25, { width: 165 });
+
+    // Colonne 3 — Détails facture
+    const col3X = MARGIN + 375;
+
+    const dateEmission = new Date(facture.date).toLocaleDateString('fr-FR', {
+      day: '2-digit', month: 'long', year: 'numeric'
+    });
+
+    const isPaid   = facture.statut?.toLowerCase() === 'payé';
+    const statutColor = isPaid ? COLORS.paid : COLORS.unpaid;
+
+    const detailRows = [
+      { label: 'Date de facture',  value: dateEmission },
+      { label: 'N° commande',      value: facture.numero },
+      { label: 'Statut',           value: facture.statut?.toUpperCase() || 'N/A', color: statutColor },
+    ];
+
+    detailRows.forEach((row, i) => {
+      const rowY = infoY + i * 18;
+      doc.fillColor(COLORS.muted).font('Helvetica').fontSize(8)
+         .text(row.label + ' :', col3X, rowY, { width: 90 });
+      doc.fillColor(row.color || COLORS.darkText).font('Helvetica-Bold').fontSize(8)
+         .text(row.value, col3X + 92, rowY, { width: 83, align: 'right' });
+    });
+
+    // ─── 2ème LIGNE DE SÉPARATION ─────────────────────────────────────────────
+    const sep2Y = infoY + 70;
+    doc.rect(MARGIN, sep2Y, CW, 1).fill(COLORS.border);
+
+    // ─── TABLEAU PRINCIPAL ────────────────────────────────────────────────────
+    const tableY   = sep2Y + 14;
+    const colW     = { desc: 240, qty: 50, pu: 90, tva: 70, total: 65 };
+    const colX     = {
+      desc:  MARGIN,
+      qty:   MARGIN + colW.desc,
+      pu:    MARGIN + colW.desc + colW.qty,
+      tva:   MARGIN + colW.desc + colW.qty + colW.pu,
+      total: MARGIN + colW.desc + colW.qty + colW.pu + colW.tva,
+    };
+
+    // En-tête tableau — fond gris Amazon
+    const thH = 26;
+    doc.rect(MARGIN, tableY, CW, thH).fill(COLORS.tableHead);
+    doc.rect(MARGIN, tableY, CW, thH).strokeColor(COLORS.border).lineWidth(0.5).stroke();
+
+    const thY = tableY + 8;
+    const thStyle = () => doc.fillColor(COLORS.darkText).font('Helvetica-Bold').fontSize(8);
+
+    thStyle().text('DESCRIPTION', colX.desc + 6, thY);
+    thStyle().text('', colX.qty, thY, { width: colW.qty, align: 'center' });
+    thStyle().text('PRIX UNITAIRE', colX.pu, thY, { width: colW.pu, align: 'right' });
+    thStyle().text(`TVA (${facture.tva}%)`, colX.tva, thY, { width: colW.tva, align: 'right' });
+    thStyle().text('MONTANT', colX.total, thY, { width: colW.total - 6, align: 'right' });
+
+    // Séparateurs verticaux de l'en-tête
+    [colX.qty, colX.pu, colX.tva, colX.total].forEach(x => {
+      doc.moveTo(x, tableY).lineTo(x, tableY + thH)
+         .strokeColor(COLORS.border).lineWidth(0.5).stroke();
+    });
+
+    // ─── LIGNES DE DONNÉES ────────────────────────────────────────────────────
+    const montant_tva   = (parseFloat(facture.montant_ht) * parseFloat(facture.tva)) / 100;
+    const montant_total = parseFloat(facture.montant_ttc);
+
+    const items = [
+      {
+        desc:  'Montant Hors Taxe (HT)',
+        ref:   'HT-BASE',
+        pu:    parseFloat(facture.montant_ht),
+        tva:   0,
+        total: parseFloat(facture.montant_ht),
+      },
+      {
+        desc:  `TVA sur montant HT`,
+        ref:   `TAUX-${facture.tva}%`,
+        pu:    montant_tva,
+        tva:   montant_tva,
+        total: montant_tva,
+      },
+      {
+        desc:  'Frais de Douane',
+        ref:   'DOUANE',
+        pu:    parseFloat(facture.frais_douane),
+        tva:   0,
+        total: parseFloat(facture.frais_douane),
+      },
+    ];
+
+    const rowH = 38;
+    items.forEach((item, i) => {
+      const rowY = tableY + thH + i * rowH;
+
+      // Fond blanc / très léger alternance
+      doc.rect(MARGIN, rowY, CW, rowH)
+         .fill(i % 2 === 0 ? COLORS.white : '#FAFAFA');
+
+      // Bordure basse
+      doc.rect(MARGIN, rowY, CW, rowH)
+         .strokeColor(COLORS.lightBorder).lineWidth(0.5).stroke();
+
+      // Séparateurs verticaux
+      [colX.qty, colX.pu, colX.tva, colX.total].forEach(x => {
+        doc.moveTo(x, rowY).lineTo(x, rowY + rowH)
+           .strokeColor(COLORS.lightBorder).lineWidth(0.5).stroke();
+      });
+
+      const textY = rowY + 8;
+
+      // Description
+      doc.fillColor(COLORS.darkText).font('Helvetica-Bold').fontSize(9)
+         .text(item.desc, colX.desc + 6, textY, { width: colW.desc - 10 });
+      doc.fillColor(COLORS.linkBlue).font('Helvetica').fontSize(7.5)
+         .text(`Réf : ${item.ref}`, colX.desc + 6, textY + 14);
+
+      // Qté
+    //   doc.fillColor(COLORS.bodyText).font('Helvetica').fontSize(9)
+    //      .text(`${item.qty}`, colX.qty, textY + 5, { width: colW.qty, align: 'center' });
+
+      // Prix unitaire
+      doc.fillColor(COLORS.bodyText).font('Helvetica').fontSize(9)
+         .text(`${item.pu.toFixed(2)} MAD`, colX.pu, textY + 5, { width: colW.pu - 6, align: 'right' });
+
+      // TVA
+      doc.fillColor(COLORS.bodyText).font('Helvetica').fontSize(9)
+         .text(item.tva > 0 ? `${item.tva.toFixed(2)} MAD` : '—', colX.tva, textY + 5, { width: colW.tva - 6, align: 'right' });
+
+      // Total
+      doc.fillColor(COLORS.darkText).font('Helvetica-Bold').fontSize(9)
+         .text(`${item.total.toFixed(2)} MAD`, colX.total, textY + 5, { width: colW.total - 8, align: 'right' });
+    });
+
+    // ─── BLOC TOTAUX (style Amazon — aligné à droite) ─────────────────────────
+    const totalsStartY = tableY + thH + items.length * rowH + 16;
+    const totalsX      = W - MARGIN - 220;
+    const totalsW      = 220;
+
+    const formatLine = (label, value, y, bold = false, big = false, color = COLORS.bodyText) => {
+      doc.fillColor(COLORS.muted).font('Helvetica').fontSize(9)
+         .text(label, totalsX, y, { width: 130 });
+      doc.fillColor(color)
+         .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+         .fontSize(big ? 12 : 9)
+         .text(`${value} MAD`, totalsX + 130, y, { width: 90, align: 'right' });
+    };
+
+    let ty = totalsStartY;
+    formatLine('Sous-total HT :',     `${parseFloat(facture.montant_ht).toFixed(2)}`, ty);
+    ty += 16;
+    formatLine(`TVA (${facture.tva}%) :`, `${montant_tva.toFixed(2)}`, ty);
+    ty += 16;
+    formatLine('Frais de douane :',   `${parseFloat(facture.frais_douane).toFixed(2)}`, ty);
+
+    // Ligne séparation avant total
+    ty += 22;
+    doc.rect(totalsX, ty, totalsW, 0.8).fill(COLORS.border);
+    ty += 10;
+
+    // Total TTC — style Amazon (gras, orange)
+    doc.fillColor(COLORS.darkText).font('Helvetica-Bold').fontSize(11)
+       .text('Total TTC :', totalsX, ty, { width: 130 });
+    doc.fillColor(COLORS.accentDark).font('Helvetica-Bold').fontSize(14)
+       .text(`${montant_total.toFixed(2)} MAD`, totalsX + 130, ty - 2, { width: 90, align: 'right' });
+
+    // ─── BLOC STATUT PAIEMENT (badge Amazon) ─────────────────────────────────
+    ty += 32;
+    const badgeW   = 160;
+    const badgeH   = 26;
+    const badgeBgC = isPaid ? '#E7F4E4' : '#FEF0E7';
+    const badgeBrC = isPaid ? COLORS.paid : COLORS.unpaid;
+
+    doc.rect(totalsX, ty, badgeW, badgeH)
+       .fill(badgeBgC).strokeColor(badgeBrC).lineWidth(1).stroke();
+
+    const badgeLabel = isPaid ? '✓  PAIEMENT REÇU' : '⚠  EN ATTENTE DE PAIEMENT';
+    doc.fillColor(badgeBrC).font('Helvetica-Bold').fontSize(8)
+       .text(badgeLabel, totalsX, ty + 8, { width: badgeW, align: 'center' });
+
+    // ─── SECTION NOTES / CONDITIONS ───────────────────────────────────────────
+    const notesY = totalsStartY;
+    const notesW = totalsX - MARGIN - 20;
+
+    doc.fillColor(COLORS.muted).font('Helvetica-Bold').fontSize(8)
+       .text('CONDITIONS DE PAIEMENT', MARGIN, notesY);
+    doc.rect(MARGIN, notesY + 12, notesW, 0.5).fill(COLORS.lightBorder);
+
+    doc.fillColor(COLORS.bodyText).font('Helvetica').fontSize(8).lineGap(3)
+       .text(
+         'Paiement à réception de facture.\nToute somme non réglée à l\'échéance entraîne des pénalités de retard au taux de 1,0% par mois.\nEn cas de litige, le tribunal de commerce de Casablanca est seul compétent.',
+         MARGIN, notesY + 20, { width: notesW }
+       );
+
+    doc.fillColor(COLORS.muted).font('Helvetica-Bold').fontSize(8)
+       .text('COORDONNÉES Agence', MARGIN, notesY + 74);
+    doc.rect(MARGIN, notesY + 86, notesW, 0.5).fill(COLORS.lightBorder);
+    doc.fillColor(COLORS.bodyText).font('Helvetica').fontSize(8).lineGap(3)
+       .text(`Service: ${process.env.SERVICE_ACHAT}\nAdresse : ${process.env.SERVICE_ADRESSE}\nIBAN : MA64 007 780 0001234567890123 45\nSWIFT : BCMAMAMC`, MARGIN, notesY + 93);
+
+    // ─── PIED DE PAGE ─────────────────────────────────────────────────────────
+    const footerY = H - 48;
+    doc.rect(MARGIN, footerY, CW, 0.5).fill(COLORS.border);
+
+    doc.fillColor(COLORS.lightMuted).font('Helvetica').fontSize(7.5)
+       .text(
+         'SERVICE IMMOBILIER S.A.  —  RC : 123456  |  ICE : 001234567000089  |  IF : 12345678',
+         MARGIN, footerY + 8, { width: CW, align: 'center' }
+       );
+    doc.fillColor(COLORS.lightMuted).font('Helvetica').fontSize(7.5)
+       .text(
+         'Ce document est une facture officielle générée automatiquement. Conservez-le pour vos archives.',
+         MARGIN, footerY + 20, { width: CW, align: 'center' }
+       );
+
+    // Numéro de page
+    doc.fillColor(COLORS.lightMuted).font('Helvetica').fontSize(7)
+       .text('Page 1 / 1', MARGIN, footerY + 33, { width: CW, align: 'right' });
+
+    doc.end();
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur lors de la génération du PDF" });
+  }
+});
 
 app.listen(PORT, () => {
     console.log(`api Facture-Fournisseur running on http://localhost:${PORT}`);
