@@ -1,6 +1,7 @@
 // --- CRUD FOURNISSEURS ---
 const SERVICE_ACHAT = 'achat'; // le service achat est le service qui gère les fournisseurs
 require('dotenv').config();
+const axios = require('axios');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -90,20 +91,31 @@ const authorizeService = (serviceRequis) => {
 // 1. CREATE : Ajouter un fournisseur
 app.post('/api/fournisseurs', authorizeService(SERVICE_ACHAT), async (req, res) => {
     try {
-        const { nom, prenom, adresse,ville,pays,distance_km,frais_douane } = req.body;
+        const { nom, prenom, adresse, ville, pays } = req.body;
         
-        if (!nom) return res.status(400).json({ message: "Le nom du fournisseur est obligatoire" });
+        if (!nom || !adresse || !ville || !pays) {
+            return res.status(400).json({ message: "Les informations de localisation sont obligatoires" });
+        }
+
+        // Appel de la fonction de géolocalisation automatique
+        const geo = await getGeoDetails(adresse, ville, pays);
 
         const [result] = await pool.execute(
-            'INSERT INTO fournisseurs (nom, prenom, adresse, ville,pays,distance_km,frais_douane) VALUES (?,?, ?, ?, ?, ?, ?)',
-            [nom, prenom, adresse, ville,pays,distance_km,frais_douane]
+            `INSERT INTO fournisseurs (nom, prenom, adresse, ville, pays, distance_km, frais_douane, latitude, longitude) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [nom, prenom, adresse, ville, pays, geo.distance_km, geo.frais_douane, geo.lat, geo.lon]
         );
 
-        res.status(201).json({ message: "Fournisseur créé", id: result.insertId });
+        res.status(201).json({ 
+            message: "Fournisseur créé avec succès", 
+            id: result.insertId,
+            details_geo: geo 
+        });
     } catch (error) {
         res.status(500).json({ message: "Erreur lors de la création", error: error.message });
     }
 });
+
 
 // 2. READ : Liste de tous les fournisseurs
 app.get('/api/fournisseurs', authorizeService(SERVICE_ACHAT), async (req, res) => {
