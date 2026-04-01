@@ -9,6 +9,9 @@ const app = express();
 const PDFDocument = require('pdfkit');
 app.use(express.json());
 
+const cors = require('cors');
+app.use(cors()); 
+
 // Connexion MySQL
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
