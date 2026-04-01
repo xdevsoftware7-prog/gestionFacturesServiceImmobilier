@@ -116,3 +116,9 @@ app.delete('/api/factures-fournisseurs/:id', async (req, res) => {
         res.status(500).json({ message: "Erreur de suppression" });
     }
 });
+
+
+
+app.listen(PORT, () => {
+    console.log(`api Facture-Fournisseur running on http://localhost:${PORT}`);
+});
