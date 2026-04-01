@@ -73,11 +73,11 @@ app.use('/clients', gatewayAuth, createProxyMiddleware({
 
 
 
-app.use('/factures-fournisseurs', gatewayAuth, createProxyMiddleware({
+app.use('/achat', gatewayAuth, createProxyMiddleware({
     target: 'http://localhost:3012', // Votre futur service clients
     changeOrigin: true,
     pathRewrite: {
-        '^/': '/api/factures-fournisseurs/',
+        '^/': '/api/',
     },
     onProxyReq: (proxyReq, req, res) => {
         // On s'assure que les headers injectés sont bien transmis au microservice
