@@ -22,7 +22,7 @@ const pool = mysql.createPool({
 const checkInternalSecret = (req, res, next) => {
     const secret = req.headers['x-internal-secret'];
     if (secret !== process.env.GATEWAY_KEY) {
-        return res.status(403).json({ message: "Interdit : Accès direct non autorisé" });
+        return res.status(403).json({ message: "Interdit : Accès direct non autorisé login" });
     }
     next();
 };

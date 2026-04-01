@@ -39,8 +39,8 @@ app.use('/auth', createProxyMiddleware({
         // On remplace le début de la chaîne (^) par /api/auth
         '^/': '/api/auth/',
     },
-    onProxyReq:(proxyReq,req,res)=>{
-        proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY);  
+    headers:{
+        'x-internal-secret':process.env.GATEWAY_KEY
     }
 }));
 
@@ -51,12 +51,14 @@ app.use('/fournisseurs', gatewayAuth, createProxyMiddleware({
     pathRewrite: {
         '^/': '/api/fournisseurs/',
     },
+    headers:{
+        'x-internal-secret':process.env.GATEWAY_KEY
+    },
     onProxyReq: (proxyReq, req, res) => {
         // On s'assure que les headers injectés sont bien transmis au microservice
         proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
         proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
         proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
-        proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY);  
     }
 }));
 
@@ -66,12 +68,14 @@ app.use('/clients', gatewayAuth, createProxyMiddleware({
     pathRewrite: {
         '^/': '/api/clients/',
     },
+    headers:{
+        'x-internal-secret':process.env.GATEWAY_KEY
+    },
     onProxyReq: (proxyReq, req, res) => {
         // On s'assure que les headers injectés sont bien transmis au microservice
         proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
         proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
         proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
-        proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY);
     }
 }));
 
@@ -83,12 +87,14 @@ app.use('/achat', gatewayAuth, createProxyMiddleware({
     pathRewrite: {
         '^/': '/api/',
     },
+    headers:{
+        'x-internal-secret':process.env.GATEWAY_KEY
+    },
     onProxyReq: (proxyReq, req, res) => {
         // On s'assure que les headers injectés sont bien transmis au microservice
         proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
         proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
         proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
-         proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY);
     }
 }));
 
@@ -99,14 +105,14 @@ app.use('/commercial', gatewayAuth, createProxyMiddleware({
     pathRewrite: {
         '^/': '/api/',
     },
+    headers:{
+        'x-internal-secret':process.env.GATEWAY_KEY
+    },
     onProxyReq: (proxyReq, req, res) => {
         // On s'assure que les headers injectés sont bien transmis au microservice
         proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
         proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
         proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
-        // On ajout un cle secret pour eliminer les acces directe aux differents micro services
-        // On autorise uniquement l'acces via Gateway
-        proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY); 
     }
 }));
 
