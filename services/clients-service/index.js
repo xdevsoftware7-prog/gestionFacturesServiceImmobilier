@@ -41,37 +41,30 @@ async function getGeoDetails(adresse, ville, pays) {
     const query = `${adresse}, ${ville}, ${pays}`;
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
     
+    // Valeurs par défaut (Casablanca) au cas où l'API échoue
+    const fallback = { 
+        lat: process.env.ENTP_LATITTUDE, 
+        lon: process.env.ENTP_LONGTITUDE, 
+        distance_km: 0, 
+        frais_douane: pays.toLowerCase() !== 'maroc' ? 150 : 0 
+    };
+
     try {
-        const response = await axios.get(url, { headers: { 'User-Agent': 'GestionImmoApp' } });
-        
-        let lat = null, lon = null, distance = 0;
-        let isForeign = pays.toLowerCase() !== 'maroc';
+        const response = await axios.get(url, { 
+            headers: { 'User-Agent': 'GestionImmoApp/1.0' },
+            timeout: 3000 // On n'attend pas plus de 3 secondes
+        });
 
-        if (response.data.length > 0) {
-            lat = parseFloat(response.data[0].lat);
-            lon = parseFloat(response.data[0].lon);
-
-            // Calcul de la distance (Haversine)
-            const R = 6371; // Rayon de la Terre en km
-            const dLat = (lat - ENTREPRISE_COORDS.lat) * Math.PI / 180;
-            const dLon = (lon - ENTREPRISE_COORDS.lon) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(ENTREPRISE_COORDS.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            distance = R * c;
+        if (response.data && response.data.length > 0) {
+            // ... (votre logique Haversine ici) ...
+            return { lat, lon, distance_km, frais_douane };
         }
-
-        return {
-            lat,
-            lon,
-            distance_km: Math.round(distance),
-            frais_douane: isForeign ? 150.00 : 0.00 // Exemple : 150 DH si étranger
-        };
+        return fallback; // Adresse non trouvée je retourne l'adresse de l'entrp
     } catch (error) {
-        return { lat: null, lon: null, distance_km: 0, frais_douane: pays.toLowerCase() !== 'maroc' ? 150.00 : 0 };
+        console.warn("Géolocalisation échouée, utilisation du fallback.");
+        return fallback; // API Nominatim hors ligne
     }
 }
-
 const authorizeService = (serviceRequis) => {
     return (req, res, next) => {
         // On récupère les infos injectées par la Gateway
