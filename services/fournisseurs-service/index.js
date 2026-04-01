@@ -9,6 +9,8 @@ const mysql = require('mysql2/promise');
 const app = express();
 
 app.use(express.json());
+const cors = require('cors');
+app.use(cors()); 
 
 // Connexion MySQL
 const pool = mysql.createPool({
