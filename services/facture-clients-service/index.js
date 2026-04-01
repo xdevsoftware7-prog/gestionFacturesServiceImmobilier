@@ -21,6 +21,17 @@ const pool = mysql.createPool({
 
 const PORT = 3013; // Les factures-clients écoute sur le port 3013
 
+const checkInternalSecret = (req, res, next) => {
+    const secret = req.headers['x-internal-secret'];
+    if (secret !== process.env.GATEWAY_KEY) {
+        return res.status(403).json({ message: "Interdit : Accès direct non autorisé" });
+    }
+    next();
+};
+
+// Le pare feu: on autorise l'acces au micro service uniquement via gateway, l'acces directe est non autorise
+app.use(checkInternalSecret);
+
 const authorizeService = (serviceRequis) => {
     return (req, res, next) => {
         // On récupère les infos injectées par la Gateway

@@ -23,7 +23,6 @@ const gatewayAuth = (req, res, next) => {
         req.headers['x-user-id'] = decoded.id;
         req.headers['x-user-role'] = decoded.role;
         req.headers['x-user-service'] = decoded.service;
-        
         next();
     } catch (err) {
         return res.status(403).json({ message: 'Token invalide' });
@@ -54,6 +53,7 @@ app.use('/fournisseurs', gatewayAuth, createProxyMiddleware({
         proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
         proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
         proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
+        proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY);  
     }
 }));
 
@@ -68,6 +68,7 @@ app.use('/clients', gatewayAuth, createProxyMiddleware({
         proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
         proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
         proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
+        proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY);
     }
 }));
 
@@ -84,6 +85,7 @@ app.use('/achat', gatewayAuth, createProxyMiddleware({
         proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
         proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
         proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
+         proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY);
     }
 }));
 
@@ -99,6 +101,9 @@ app.use('/commercial', gatewayAuth, createProxyMiddleware({
         proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
         proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
         proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
+        // On ajout un cle secret pour eliminer les acces directe aux differents micro services
+        // On autorise uniquement l'acces via Gateway
+        proxyReq.setHeader('x-internal-secret', process.env.GATEWAY_KEY); 
     }
 }));
 

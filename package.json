@@ -1,0 +1,20 @@
+{
+  "name": "gestionfacturesserviceimmobilier",
+  "version": "1.0.0",
+  "description": "Un projet qui vise à gérer les factures des fournisseurs et des clients de service immobilier\r le technologies utilisés: react en front end, nodeJS-ExpressJS en backend",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xdevsoftware7-prog/gestionFacturesServiceImmobilier.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/xdevsoftware7-prog/gestionFacturesServiceImmobilier/issues"
+  },
+  "homepage": "https://github.com/xdevsoftware7-prog/gestionFacturesServiceImmobilier#readme"
+}
