@@ -90,10 +90,10 @@ app.post('/api/factures-fournisseurs', async (req, res) => {
     }
 });
 
-// READ : Lister les factures-fournisseurs avec filtres (statut, fournisseur_id, numero)
+// READ : Lister les factures-clients avec filtres avancés (Statut, ID, Numéro, Dates)
 app.get('/api/factures-fournisseurs', async (req, res) => {
     try {
-        const { statut, fournisseur_id, numero } = req.query;
+        const { statut, fournisseur_id, numero, date_debut, date_fin  } = req.query;
         let query = `
             SELECT f.*, fr.nom as fournisseur_nom, fr.prenom as fournisseur_prenom 
             FROM factures_fournisseurs f
@@ -114,6 +114,17 @@ app.get('/api/factures-fournisseurs', async (req, res) => {
             query += ` AND f.numero LIKE ?`;
             params.push(`%${numero}%`);
         }
+
+        if (date_debut && date_fin) {
+            query += ` AND f.date BETWEEN ? AND ?`;
+            params.push(date_debut); // Format attendu YYYY-MM-DD
+            params.push(date_fin);   // Format attendu YYYY-MM-DD
+        } else if (date_debut) {
+            // Optionnel : permettre de filtrer à partir d'une date seulement
+            query += ` AND f.date >= ?`;
+            params.push(date_debut);
+        }
+
 
         query += ` ORDER BY f.date DESC`;
 
