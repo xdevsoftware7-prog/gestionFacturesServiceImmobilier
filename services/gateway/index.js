@@ -3,9 +3,9 @@ const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-app.use(cors()); 
 
 const app = express();
+app.use(cors()); 
 const PORT = 3000; // La Gateway écoute sur le port 3000
 
 // --- MIDDLEWARE D'AUTHENTIFICATION CENTRALISÉ ---
