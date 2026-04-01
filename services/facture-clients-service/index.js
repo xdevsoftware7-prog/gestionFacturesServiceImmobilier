@@ -92,15 +92,16 @@ app.post('/api/factures-clients', async (req, res) => {
     }
 });
 
-// READ : Lister les factures-clients avec filtres (statut, client_id, numero)
+// READ : Lister les factures-clients avec filtres avancés (Statut, ID, Numéro, Dates)
 app.get('/api/factures-clients', async (req, res) => {
     try {
-        const { statut, client_id, numero } = req.query;
+        const { statut, client_id, numero, date_debut, date_fin } = req.query;
+        
         let query = `
             SELECT f.*, fr.nom as client_nom, fr.prenom as client_prenom 
             FROM factures_clients f
             JOIN clients fr ON f.client_id = fr.id
-            WHERE 1=1`; // Le "1=1" facilite l'ajout dynamique de conditions AND
+            WHERE 1=1`;
         
         const params = [];
 
@@ -115,6 +116,17 @@ app.get('/api/factures-clients', async (req, res) => {
         if (numero) {
             query += ` AND f.numero LIKE ?`;
             params.push(`%${numero}%`);
+        }
+
+        // Correction ici : Pas de % pour les dates, et on ajoute chaque paramètre séparément
+        if (date_debut && date_fin) {
+            query += ` AND f.date BETWEEN ? AND ?`;
+            params.push(date_debut); // Format attendu YYYY-MM-DD
+            params.push(date_fin);   // Format attendu YYYY-MM-DD
+        } else if (date_debut) {
+            // Optionnel : permettre de filtrer à partir d'une date seulement
+            query += ` AND f.date >= ?`;
+            params.push(date_debut);
         }
 
         query += ` ORDER BY f.date DESC`;
