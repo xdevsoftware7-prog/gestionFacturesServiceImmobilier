@@ -116,6 +116,15 @@ app.use('/commercial', gatewayAuth, createProxyMiddleware({
     }
 }));
 
+
+app.use('/stats', gatewayAuth, createProxyMiddleware({
+    target: 'http://localhost:3015',
+    pathRewrite: { '^/': '/api/stats/' },
+    headers:{
+        'x-internal-secret':process.env.GATEWAY_KEY
+    }
+}));
+
 app.listen(PORT, () => {
     console.log(`🚀 API Gateway Prince running on http://localhost:${PORT}`);
 });
