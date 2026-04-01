@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
+app.use(cors()); 
 
 const app = express();
 const PORT = 3000; // La Gateway écoute sur le port 3000
