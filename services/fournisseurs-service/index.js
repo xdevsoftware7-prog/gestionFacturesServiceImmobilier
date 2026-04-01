@@ -32,6 +32,47 @@ const checkInternalSecret = (req, res, next) => {
 // Le pare feu: on autorise l'acces au micro service uniquement via gateway, l'acces directe est non autorise
 app.use(checkInternalSecret);
 
+
+// Coordonnées de votre entreprise (Exemple : Casablanca, Centre-ville)
+const ENTREPRISE_COORDS = { lat: process.env.ENTP_LATITTUDE, lon: process.env.ENTP_LONGTITUDE };
+
+async function getGeoDetails(adresse, ville, pays) {
+    const query = `${adresse}, ${ville}, ${pays}`;
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+    
+    try {
+        const response = await axios.get(url, { headers: { 'User-Agent': 'GestionImmoApp' } });
+        
+        let lat = null, lon = null, distance = 0;
+        let isForeign = pays.toLowerCase() !== 'maroc';
+
+        if (response.data.length > 0) {
+            lat = parseFloat(response.data[0].lat);
+            lon = parseFloat(response.data[0].lon);
+
+            // Calcul de la distance (Haversine)
+            const R = 6371; // Rayon de la Terre en km
+            const dLat = (lat - ENTREPRISE_COORDS.lat) * Math.PI / 180;
+            const dLon = (lon - ENTREPRISE_COORDS.lon) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(ENTREPRISE_COORDS.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            distance = R * c;
+        }
+
+        return {
+            lat,
+            lon,
+            distance_km: Math.round(distance),
+            frais_douane: isForeign ? 150.00 : 0.00 // Exemple : 150 DH si étranger
+        };
+    } catch (error) {
+        return { lat: null, lon: null, distance_km: 0, frais_douane: pays.toLowerCase() !== 'maroc' ? 150.00 : 0 };
+    }
+}
+
+
+
 const authorizeService = (serviceRequis) => {
     return (req, res, next) => {
         // On récupère les infos injectées par la Gateway
