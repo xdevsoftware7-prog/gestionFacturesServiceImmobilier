@@ -88,6 +88,19 @@ app.use('/achat', gatewayAuth, createProxyMiddleware({
 }));
 
 
+app.use('/commercial', gatewayAuth, createProxyMiddleware({
+    target: 'http://localhost:3013', // Votre futur service clients
+    changeOrigin: true,
+    pathRewrite: {
+        '^/': '/api/',
+    },
+    onProxyReq: (proxyReq, req, res) => {
+        // On s'assure que les headers injectés sont bien transmis au microservice
+        proxyReq.setHeader('x-user-id', req.headers['x-user-id']);
+        proxyReq.setHeader('x-user-role', req.headers['x-user-role']);
+        proxyReq.setHeader('x-user-service', req.headers['x-user-service']);
+    }
+}));
 
 app.listen(PORT, () => {
     console.log(`🚀 API Gateway Prince running on http://localhost:${PORT}`);
