@@ -295,6 +295,97 @@ app.delete('/api/paiements-fournisseurs/:paiement_id', async (req, res) => {
 });
 
 
+
+
+// Generation de pdf pour une facture fournisseur spécifique
+app.get('/api/factures-fournisseurs/:id/pdf', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Récupérer les données de la facture et du fournisseur associé
+        const [rows] = await pool.execute(`
+            SELECT f.*, fr.nom as fournisseur_nom, fr.adresse as fournisseur_adresse 
+            FROM factures_fournisseurs f
+            JOIN fournisseurs fr ON f.fournisseur_id = fr.id
+            WHERE f.id = ?`, 
+            [id]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "Facture introuvable" });
+        }
+
+        const facture = rows[0];
+
+        // 2. Création du document PDF
+        const doc = new PDFDocument({ margin: 50 });
+
+        // Configuration des headers de réponse pour le navigateur
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=facture_${facture.numero}.pdf`);
+
+        // Envoyer le PDF directement au flux de réponse
+        doc.pipe(res);
+
+        // --- DESIGN DU PDF ---
+
+        // En-tête : Informations de l'entreprise (La vôtre)
+        doc.fillColor('#444444').fontSize(20).text('SERVICE IMMOBILIER S.A.', 50, 50);
+        doc.fontSize(10).text('Casablanca, Maroc', 50, 80);
+        doc.text('Contact: contact@immo-service.ma', 50, 95);
+        doc.moveDown();
+
+        // Informations du Fournisseur (Destinataire)
+        doc.fontSize(12).text(`Fournisseur : ${facture.fournisseur_nom}`, 350, 80);
+        doc.fontSize(10).text(`Adresse : ${facture.fournisseur_adresse || 'N/A'}`, 350, 95);
+        
+        // Ligne de séparation
+        doc.moveTo(50, 150).lineTo(550, 150).stroke();
+
+        // Détails de la facture
+        doc.fontSize(16).text(`FACTURE N° : ${facture.numero}`, 50, 170);
+        doc.fontSize(10).text(`Date d'émission : ${new Date(facture.date).toLocaleDateString()}`, 50, 195);
+        doc.text(`Statut actuel : ${facture.statut.toUpperCase()}`, 50, 210);
+
+        // Tableau des montants
+        const tableTop = 250;
+        doc.font('Helvetica-Bold');
+        doc.text('Description', 50, tableTop);
+        doc.text('Montant (MAD)', 450, tableTop, { align: 'right' });
+        
+        doc.moveTo(50, 265).lineTo(550, 265).stroke();
+        doc.font('Helvetica');
+
+        doc.text('Montant Hors Taxe (HT)', 50, 280);
+        doc.text(`${parseFloat(facture.montant_ht).toFixed(2)}`, 450, 280, { align: 'right' });
+
+        doc.text(`TVA (${facture.tva}%)`, 50, 300);
+        const montant_tva = (facture.montant_ht * facture.tva) / 100;
+        doc.text(`${montant_tva.toFixed(2)}`, 450, 300, { align: 'right' });
+
+        doc.text('Frais de Douane', 50, 320);
+        doc.text(`${parseFloat(facture.frais_douane).toFixed(2)}`, 450, 320, { align: 'right' });
+
+        // Total
+        doc.moveTo(350, 350).lineTo(550, 350).stroke();
+        doc.fontSize(14).font('Helvetica-Bold');
+        doc.text('TOTAL TTC', 350, 370);
+        doc.text(`${parseFloat(facture.montant_ttc).toFixed(2)} MAD`, 450, 370, { align: 'right' });
+
+        // Pied de page
+        doc.fontSize(10).font('Helvetica-Oblique')
+           .text('Merci de votre confiance. Document généré automatiquement.', 50, 700, { align: 'center' });
+
+        // Finalisation
+        doc.end();
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Erreur lors de la génération du PDF" });
+    }
+});
+
+
 app.listen(PORT, () => {
     console.log(`api Facture-Fournisseur running on http://localhost:${PORT}`);
 });
