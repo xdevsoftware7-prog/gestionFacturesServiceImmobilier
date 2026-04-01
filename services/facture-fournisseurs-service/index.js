@@ -35,11 +35,36 @@ const authorizeService = (serviceRequis) => {
 };
 
 
+// Generation de numero facture automatiquement sous forme: 'FAC-FOUR-2026-0001'
+const generateInvoiceNumber = async (type) => {
+    const table = type === 'fournisseur' ? 'factures_fournisseurs' : 'factures_clients';
+    const prefix = type === 'fournisseur' ? 'FAC-FOUR' : 'FAC-CLI';
+    const year = new Date().getFullYear();
+
+    // On cherche le dernier numéro pour l'année en cours
+    const [rows] = await pool.execute(
+        `SELECT numero FROM ${table} WHERE numero LIKE ? ORDER BY id DESC LIMIT 1`,
+        [`${prefix}-${year}-%`]
+    );
+
+    let nextNumber = 1;
+    if (rows.length > 0) {
+        // On extrait le dernier nombre (ex: de "FAC-FOUR-2026-0005" on tire 5)
+        const lastNumero = rows[0].numero;
+        const lastCount = parseInt(lastNumero.split('-').pop());
+        nextNumber = lastCount + 1;
+    }
+
+    // On formate avec des zéros au début (ex: 0001, 0002...)
+    const formattedNumber = String(nextNumber).padStart(4, '0');
+    return `${prefix}-${year}-${formattedNumber}`;
+};
+
 // CREATE : Ajouter une facture fournisseur
 app.post('/api/factures-fournisseurs', async (req, res) => {
     try {
-        const { fournisseur_id, numero, date, montant_ht, tva, frais_douane, statut } = req.body;
-        
+        const { fournisseur_id, date, montant_ht, tva, frais_douane, statut } = req.body;
+        const numero = await generateInvoiceNumber('fournisseur');
         // Calcul automatique du TTC si non fourni
         const montant_ttc = parseFloat(montant_ht) * (1 + parseFloat(tva) / 100) + parseFloat(frais_douane || 0);
 
@@ -49,7 +74,7 @@ app.post('/api/factures-fournisseurs', async (req, res) => {
             [fournisseur_id, numero, date, montant_ht, tva, frais_douane || 0, montant_ttc, statut || 'en attente']
         );
 
-        res.status(201).json({ message: "Facture fournisseur créée", id: result.insertId, ttc: montant_ttc });
+        res.status(201).json({ message: "Facture fournisseur créée", id: result.insertId, numero: numero, ttc: montant_ttc });
     } catch (error) {
         res.status(500).json({ message: "Erreur lors de la création", error: error.message });
     }
