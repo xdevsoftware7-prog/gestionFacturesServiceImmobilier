@@ -14,7 +14,7 @@ const ProtectedRoute = ({children, allowedService}) =>{
     }
     // si user n'est pas admin ou n'appartient pas au service convenable
     if(userRole !== 'admin' && userService !== allowedService){
-        return <Navigate to="/unauthrized" />;
+        return <Navigate to="/unauthorized" />;
     }
     return children;
 }
