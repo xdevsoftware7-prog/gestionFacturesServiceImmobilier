@@ -5,7 +5,13 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
 const app = express();
-app.use(cors()); 
+const corsOptions = {
+    origin:'http://localhost:3050',
+    methods:'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-internal-secret'], // Autorise vos headers personnalisés
+  credentials: true // Utile si vous passez aux cookies plus tard
+}
+app.use(cors(corsOptions)); 
 const PORT = 3000; // La Gateway écoute sur le port 3000
 
 // --- MIDDLEWARE D'AUTHENTIFICATION CENTRALISÉ ---
