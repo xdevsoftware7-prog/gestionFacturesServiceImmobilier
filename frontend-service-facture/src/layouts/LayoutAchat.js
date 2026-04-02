@@ -7,8 +7,8 @@ export default function LayoutAchat() {
     <div>
         <nav style={{ background:'#2c3e50', color:'white', padding:'10px' }}>
             <h3>Espace Achat (Fournisseurs)</h3>
-            <link to="/achat/factures" style={{color:'white', marginRight:'10px' }}>Factures</link>
-            <link to="/achat/fournisseurs" style={{color:'white' }}>Fournisseurs</link>
+            <Link to="/achat/factures" style={{color:'white', marginRight:'10px' }}>Factures</Link>
+            <Link to="/achat/fournisseurs" style={{color:'white' }}>Fournisseurs</Link>
         </nav>
         <div style={{ padding:'20px' }}>
             <Outlet/>
