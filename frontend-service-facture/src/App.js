@@ -6,10 +6,36 @@ import LayoutCommercial from './layouts/LayoutCommercial';
 import LayoutAdmin from './layouts/LayoutAdmin';
 import ProtectedRoute from './components/ProtectedRoute';
 import FournisseursList from './pages/achat/FournisseursList';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <BrowserRouter>
+      <Toaster 
+        position="top-right"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#22c55e',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <Routes>
         <Route path='/login' element={<Login/>} />
         <Route path='/unauthorized' element={<Unauthorized/>} />
