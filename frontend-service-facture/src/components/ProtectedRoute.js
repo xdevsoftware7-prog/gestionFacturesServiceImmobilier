@@ -8,7 +8,10 @@ const ProtectedRoute = ({children, allowedService}) =>{
     if(!isAuthenticated){
         return <Navigate to="/login" />;
     }
-
+    // si user est admin il passe partout
+    if(userRole === 'admin'){
+        return children;
+    }
     // si user n'est pas admin ou n'appartient pas au service convenable
     if(userRole !== 'admin' && userService !== allowedService){
         return <Navigate to="/unauthrized" />;
