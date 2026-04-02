@@ -5,6 +5,7 @@ import LayoutAchat from './layouts/LayoutAchat';
 import LayoutCommercial from './layouts/LayoutCommercial';
 import LayoutAdmin from './layouts/LayoutAdmin';
 import ProtectedRoute from './components/ProtectedRoute';
+import FournisseursList from './pages/achat/FournisseursList';
 
 function App() {
   return (
@@ -28,7 +29,7 @@ function App() {
         }>
           {/* Sous route Achat */}
           <Route path='factures' element={<h2>liste des factures Fournisseurs</h2>}></Route>
-          <Route path='fournisseurs' element={<h2>Gestion des Fournisseurs</h2>}></Route>
+          <Route path='fournisseurs' element={<FournisseursList/>}></Route>
         </Route>
 
         {/* Espace Commercial */}
