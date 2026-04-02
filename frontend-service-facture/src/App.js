@@ -1,24 +1,44 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter, Routes, Route} from 'react-router-dom';
+import Login from './pages/Login';
+import Unauthorized from './pages/Unauthorized';
+import LayoutAchat from './layouts/LayoutAchat';
+import LayoutCommercial from './layouts/LayoutCommercial';
+import LayoutAdmin from './layouts/LayoutAdmin';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path='/login' element={<Login/>} />
+        <Route path='/unauthorized' element={<Unauthorized/>} />
+        
+        {/* Espace ADMIN */}
+        <Route path='/admin' element =  {
+          <ProtectedRoute allowedService="all"> <LayoutAdmin/> </ProtectedRoute>
+         }>
+          {/* Sous route admin */}
+        </Route>
+
+        {/* Espace Achat */}
+        <Route path='/achat' element = {
+          <ProtectedRoute allowedService="achat"><LayoutAchat/></ProtectedRoute>
+        }>
+          {/* Sous route Achat */}
+          <Route path='/factures' element={<h2>liste des factures Fournisseurs</h2>}></Route>
+          <Route path='/fournisseurs' element={<h2>Gestion des Fournisseurs</h2>}></Route>
+        </Route>
+
+        {/* Espace Commercial */}
+        <Route path='/commercial' element={
+          <ProtectedRoute allowedService="commercial"><LayoutCommercial/></ProtectedRoute>
+        }>
+          {/* Sous Routes commercial */}
+          <Route path='/factures' element={<h2>liste des Factures Clients</h2>}></Route>
+          <Route path='/clients' element={<h2>Gestion Clients</h2>}></Route>
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
