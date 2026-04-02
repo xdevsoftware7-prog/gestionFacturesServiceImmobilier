@@ -18,6 +18,8 @@ function App() {
           <ProtectedRoute allowedService="all"> <LayoutAdmin/> </ProtectedRoute>
          }>
           {/* Sous route admin */}
+          <Route path='fournisseur-stats' element={<h2>liste des stats Fournisseurs</h2>}></Route>
+          <Route path='clients-stats' element={<h2>liste des stats clients</h2>}></Route>
         </Route>
 
         {/* Espace Achat */}
