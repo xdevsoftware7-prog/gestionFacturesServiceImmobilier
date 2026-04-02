@@ -14,8 +14,9 @@ export default function Login() {
         e.preventDefault();
         try{
             const response = await api.post('auth/login',{email,password});
-            const {token, role, service} = response.data;
-
+            console.log(response);
+            const {token, user} = response.data;
+            const {role,service} = user;
             // Remplissage de Redux et de localStorage
             dispatch(loginSuccess({token,role,service}));
 
