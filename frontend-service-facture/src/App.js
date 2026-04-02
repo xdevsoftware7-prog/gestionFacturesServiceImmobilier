@@ -25,8 +25,8 @@ function App() {
           <ProtectedRoute allowedService="achat"><LayoutAchat/></ProtectedRoute>
         }>
           {/* Sous route Achat */}
-          <Route path='/factures' element={<h2>liste des factures Fournisseurs</h2>}></Route>
-          <Route path='/fournisseurs' element={<h2>Gestion des Fournisseurs</h2>}></Route>
+          <Route path='factures' element={<h2>liste des factures Fournisseurs</h2>}></Route>
+          <Route path='fournisseurs' element={<h2>Gestion des Fournisseurs</h2>}></Route>
         </Route>
 
         {/* Espace Commercial */}
@@ -34,8 +34,8 @@ function App() {
           <ProtectedRoute allowedService="commercial"><LayoutCommercial/></ProtectedRoute>
         }>
           {/* Sous Routes commercial */}
-          <Route path='/factures' element={<h2>liste des Factures Clients</h2>}></Route>
-          <Route path='/clients' element={<h2>Gestion Clients</h2>}></Route>
+          <Route path='factures' element={<h2>liste des Factures Clients</h2>}></Route>
+          <Route path='clients' element={<h2>Gestion Clients</h2>}></Route>
         </Route>
       </Routes>
     </BrowserRouter>
