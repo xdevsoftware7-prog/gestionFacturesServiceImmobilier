@@ -80,7 +80,7 @@ return (
                         <td>{f.distance_km}</td>
                         <td>{f.frais_douane}</td>
                         <td>
-                            <Link to={`/achat/`}>
+                            <Link to={`/achat/fournisseur/modifier/${f.id}`}>
                             <button style={{ background:'#27ae60',color:'white',border:'none',padding:'5px 10px',marginRight:'5px',borderRadius:'4px',cursor:'pointer' }}>Modifier</button>
                             </Link>
                             <button onClick={()=>handleSupprimer(f.id)} style={{ background:'#e74c3c',color:'white',border:'none',padding:'5px 10px', borderRadius:'4px',cursor:'pointer' }}>Supprimer</button>
