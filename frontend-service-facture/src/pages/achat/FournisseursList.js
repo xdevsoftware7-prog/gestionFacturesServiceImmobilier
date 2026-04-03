@@ -5,15 +5,19 @@ import { Link } from 'react-router-dom';
 
 export default function FournisseursList() {
     const [fournisseurs,setFournisseurs] = useState([]);
+    const [currentPage,setCurrentPage] = useState(1);
+    const [totalPages,setTotalPages] = useState(1);
     const [error,setError] = useState(null);
     const [loading,setLoading] = useState(true);
 
     
-    const fetchFournisseurs = async ()=>{
+    const fetchFournisseurs = async (page)=>{
             try {
                 setLoading(true);
-                const response = await api.get('/fournisseurs');
-                setFournisseurs(response.data);
+                const response = await api.get(`/fournisseurs?page=${page}&limit=5`);
+                console.log(response);
+                setFournisseurs(response.data.data);
+                setTotalPages(response.data.pagination.totalPages);
             } catch (error) {
                 setError(error.response?.data?.message || "Erreur de connexion au serveur");
             }finally{
@@ -23,9 +27,9 @@ export default function FournisseursList() {
 
     
     useEffect(()=>{
-        fetchFournisseurs();
+        fetchFournisseurs(currentPage);
         
-    },[]);
+    },[currentPage]);
 
 
     const handleSupprimer = async (id)=>{
@@ -56,7 +60,8 @@ return (
     <div style={{ padding:'20px' }}>
         <h2>Liste des Fournisseurs</h2>
         <Link to="/achat/fournisseur/nouveau">Ajouter Un nouveau Fournisseur</Link>
-        <table border="1" cellPadding="10" style={{ width:'100%',borderCollapse:'collapse',textAlign:'left' }}>
+        {loading ? <p>Chargement ...</p> : (<>
+            <table border="1" cellPadding="10" style={{ width:'100%',borderCollapse:'collapse',textAlign:'left' }}>
             <thead style={{ backgroundColor:'#f4f4f4' }}>
                 <tr>
                     <th>Nom</th>
@@ -90,6 +95,17 @@ return (
                 
             </tbody>
         </table>
+        {/* Pagination */}
+        <div style={{ marginTop:'20px', display:'flex', gap:'10px', alignItems:'center', }}>
+            <button disabled = {currentPage === 1}
+            onClick={()=>setCurrentPage(prev => prev - 1)}
+            >Précédent</button>
+            <span>Page {currentPage} sur {totalPages}</span>
+            <button disabled={currentPage === totalPages} 
+                onClick={()=>setCurrentPage(prev=>prev+1)}
+            >Suivant</button>
+        </div>
+        </>)}
     </div>
   )
 }
