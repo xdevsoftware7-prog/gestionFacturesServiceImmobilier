@@ -143,8 +143,20 @@ app.post('/api/fournisseurs', authorizeService(SERVICE_ACHAT), async (req, res) 
 // 2. READ : Liste de tous les fournisseurs
 app.get('/api/fournisseurs', authorizeService(SERVICE_ACHAT), async (req, res) => {
     try {
-        const [rows] = await pool.execute('SELECT * FROM fournisseurs ORDER BY id DESC');
-        res.json(rows);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5;
+        const offset = (page -1)*limit;
+        // récupération  de total
+        const [totalRows] = await pool.execute("SELECT COUNT(*) as count From fournisseurs" );
+        const totalItems = totalRows[0].count;
+        const totalPages = Math.ceil(totalItems/limit);
+        const [rows] = await pool.execute('SELECT * FROM fournisseurs ORDER BY id DESC LIMIT ? OFFSET ?',[limit.toString(),offset.toString()]);
+        res.json({
+            data:rows,
+            pagination:{
+                totalItems, totalPages,currentPage:page,limit
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: "Erreur de récupération" ,error:error});
     }
