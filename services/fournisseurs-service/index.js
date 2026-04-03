@@ -143,6 +143,11 @@ app.post('/api/fournisseurs', authorizeService(SERVICE_ACHAT), async (req, res) 
 // 2. READ : Liste de tous les fournisseurs
 app.get('/api/fournisseurs', authorizeService(SERVICE_ACHAT), async (req, res) => {
     try {
+        const isAll = req.query.all === 'true';
+        if(isAll){
+            const [rows] = await pool.execute("SELECT id,nom,prenom,ville,pays from fournisseurs ORDER BY id ASC");
+            return res.json({data:rows});
+        }
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 5;
         const offset = (page -1)*limit;
