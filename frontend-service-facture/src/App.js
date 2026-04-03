@@ -9,6 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import FournisseursList from './pages/achat/FournisseursList';
 import { Toaster } from 'react-hot-toast';
 import FournisseurForm from './pages/achat/FournisseurForm';
+import FournisseurFacture from './pages/achat/FournisseurFacture';
 
 function App() {
   return (
@@ -56,7 +57,7 @@ function App() {
           <ProtectedRoute allowedService="achat"><LayoutAchat/></ProtectedRoute>
         }>
           {/* Sous route Achat */}
-          <Route path='factures' element={<h2>liste des factures Fournisseurs</h2>}></Route>
+          <Route path='factures' element={<FournisseurFacture/>}></Route>
           <Route path='fournisseurs' element={<FournisseursList/>}></Route>
           <Route path='fournisseur/nouveau' element={<FournisseurForm/>}></Route>
           <Route path='fournisseur/modifier/:id' element={<FournisseurForm/>}></Route>
