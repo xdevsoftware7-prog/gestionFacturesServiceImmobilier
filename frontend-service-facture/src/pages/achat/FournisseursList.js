@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api/axiosConfig';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import FournisseursMap from '../../components/FournisseursMap';
 
 export default function FournisseursList() {
     const [fournisseurs,setFournisseurs] = useState([]);
@@ -10,6 +11,7 @@ export default function FournisseursList() {
     const [limit,setLimit] = useState(5);
     const [error,setError] = useState(null);
     const [loading,setLoading] = useState(true);
+    const [activeCoords, setActiveCoords] = useState(null);
 
     
     const fetchFournisseurs = async (page,currentLimit)=>{
@@ -62,6 +64,7 @@ return (
         <h2>Liste des Fournisseurs</h2>
         <Link to="/achat/fournisseur/nouveau">Ajouter Un nouveau Fournisseur</Link>
         {loading ? <p>Chargement ...</p> : (<>
+            {fournisseurs.length !== 0 ? <FournisseursMap fournisseurs={fournisseurs} activeCoords={activeCoords}></FournisseursMap> : ""}
             <div style={{ marginTop:'15px',display:'flex', alignItems:'center',gap:'10px' }}>
                 <label htmlFor='limit-select'>Afficher: </label>
                 <select id='limit-select' value={limit} onChange={(e)=>{
@@ -101,6 +104,12 @@ return (
                         <td>{f.distance_km}</td>
                         <td>{f.frais_douane}</td>
                         <td>
+                            <button
+                                onClick={(e)=>setActiveCoords([f.latitude,f.longitude])}
+                                style={{ background: '#3498db', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', marginRight: '5px' }}
+                            >
+                                Voir
+                            </button>
                             <Link to={`/achat/fournisseur/modifier/${f.id}`}>
                             <button style={{ background:'#27ae60',color:'white',border:'none',padding:'5px 10px',marginRight:'5px',borderRadius:'4px',cursor:'pointer' }}>Modifier</button>
                             </Link>

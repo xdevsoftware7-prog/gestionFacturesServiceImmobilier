@@ -1,3 +1,4 @@
+import 'leaflet/dist/leaflet.css';
 import { BrowserRouter, Routes, Route} from 'react-router-dom';
 import Login from './pages/Login';
 import Unauthorized from './pages/Unauthorized';
