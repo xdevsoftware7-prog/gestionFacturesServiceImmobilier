@@ -21,7 +21,7 @@ function NavbarCommercial() {
         </span>
         <Link to="/commercial" style={{color:'white', marginRight:'10px' }}>Dashboard</Link>
         <Link to="/commercial/factures" style={{color:'white', marginRight:'10px' }}>Factures</Link>
-        <Link to="/commercial/clients" style={{color:'white' }}>Fournisseurs</Link>
+        <Link to="/commercial/clients" style={{color:'white' }}>Clients</Link>
     </div>
     <button onClick={handleLogout} style={{ background:'#e74c3c', color:'white' }}>Déconnexion</button>
     </nav>
