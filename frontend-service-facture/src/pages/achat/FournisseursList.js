@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api/axiosConfig';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 
 export default function FournisseursList() {
     const [fournisseurs,setFournisseurs] = useState([]);
@@ -54,6 +55,7 @@ export default function FournisseursList() {
 return (
     <div style={{ padding:'20px' }}>
         <h2>Liste des Fournisseurs</h2>
+        <Link to="/achat/fournisseur/nouveau">Ajouter Un nouveau Fournisseur</Link>
         <table border="1" cellPadding="10" style={{ width:'100%',borderCollapse:'collapse',textAlign:'left' }}>
             <thead style={{ backgroundColor:'#f4f4f4' }}>
                 <tr>
@@ -78,7 +80,9 @@ return (
                         <td>{f.distance_km}</td>
                         <td>{f.frais_douane}</td>
                         <td>
+                            <Link to={`/achat/`}>
                             <button style={{ background:'#27ae60',color:'white',border:'none',padding:'5px 10px',marginRight:'5px',borderRadius:'4px',cursor:'pointer' }}>Modifier</button>
+                            </Link>
                             <button onClick={()=>handleSupprimer(f.id)} style={{ background:'#e74c3c',color:'white',border:'none',padding:'5px 10px', borderRadius:'4px',cursor:'pointer' }}>Supprimer</button>
                         </td>
                     </tr>
