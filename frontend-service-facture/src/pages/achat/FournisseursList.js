@@ -7,14 +7,15 @@ export default function FournisseursList() {
     const [fournisseurs,setFournisseurs] = useState([]);
     const [currentPage,setCurrentPage] = useState(1);
     const [totalPages,setTotalPages] = useState(1);
+    const [limit,setLimit] = useState(5);
     const [error,setError] = useState(null);
     const [loading,setLoading] = useState(true);
 
     
-    const fetchFournisseurs = async (page)=>{
+    const fetchFournisseurs = async (page,currentLimit)=>{
             try {
                 setLoading(true);
-                const response = await api.get(`/fournisseurs?page=${page}&limit=5`);
+                const response = await api.get(`/fournisseurs?page=${page}&limit=${currentLimit}`);
                 console.log(response);
                 setFournisseurs(response.data.data);
                 setTotalPages(response.data.pagination.totalPages);
@@ -27,9 +28,9 @@ export default function FournisseursList() {
 
     
     useEffect(()=>{
-        fetchFournisseurs(currentPage);
+        fetchFournisseurs(currentPage,limit);
         
-    },[currentPage]);
+    },[currentPage,limit]);
 
 
     const handleSupprimer = async (id)=>{
@@ -61,6 +62,21 @@ return (
         <h2>Liste des Fournisseurs</h2>
         <Link to="/achat/fournisseur/nouveau">Ajouter Un nouveau Fournisseur</Link>
         {loading ? <p>Chargement ...</p> : (<>
+            <div style={{ marginTop:'15px',display:'flex', alignItems:'center',gap:'10px' }}>
+                <label htmlFor='limit-select'>Afficher: </label>
+                <select id='limit-select' value={limit} onChange={(e)=>{
+                    setLimit(parseInt(e.target.value));
+                    setCurrentPage(1);
+                }}
+                style={{ padding:'5px',borderRight:'4px' }}
+                >
+                    <option value={5}>5 lignes</option>
+                    <option value={10}>10 lignes</option>
+                    <option value={20}>20 lignes</option>
+                    <option value={50}>50 lignes</option>
+                </select>
+                <span>Fournisseurs par page</span>
+            </div>
             <table border="1" cellPadding="10" style={{ width:'100%',borderCollapse:'collapse',textAlign:'left' }}>
             <thead style={{ backgroundColor:'#f4f4f4' }}>
                 <tr>
