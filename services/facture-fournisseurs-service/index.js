@@ -77,9 +77,14 @@ const generateInvoiceNumber = async (type) => {
 app.post('/api/factures-fournisseurs', async (req, res) => {
     try {
         const { fournisseur_id, date, montant_ht, tva, frais_douane, statut } = req.body;
+        // sécurité
+        const ht = parseFloat(montant_ht) || 0;
+        const tax = parseFloat(tva) || 0;
+        const douane = parseFloat(frais_douane) || 0;
+
         const numero = await generateInvoiceNumber('fournisseur');
         // Calcul automatique du TTC si non fourni
-        const montant_ttc = parseFloat(montant_ht) * (1 + parseFloat(tva) / 100) + parseFloat(frais_douane || 0);
+        const montant_ttc = ht * (1 + tax / 100) + douane;
 
         const [result] = await pool.execute(
             `INSERT INTO factures_fournisseurs (fournisseur_id, numero, date, montant_ht, tva, frais_douane, montant_ttc, statut) 
